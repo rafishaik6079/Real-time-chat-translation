@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create Group</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='create_group.css') }}">
+</head>
+<body>
+
+<div class="form-container">
+    <h2>Create Group</h2>
+
+    <form method="POST">
+        <input type="text" name="group_name" placeholder="Group Name" required>
+        <button type="submit">Create Group</button>
+    </form>
+
+    <a href="/dashboard" class="back-link">Back to Dashboard</a>
+</div>
+
+</body>
+</html>

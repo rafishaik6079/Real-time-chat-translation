@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+<body>
+
+<h2>Welcome, {{ username }}</h2>
+
+<div class="dashboard-container">
+
+    <!-- Left: Group List -->
+    <div class="group-list">
+        <h3>Your Groups</h3>
+        <ul>
+            {% for group in groups %}
+                <li><a href="/group/{{ group[0] }}">{{ group[1] }}</a></li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- Right: Buttons -->
+    <div class="action-buttons">
+        <a href="/create_group" class="btn create-btn">Create New Group</a>
+        <a href="/" class="btn home-btn">Home</a>
+    </div>
+
+</div>
+
+</body>
+</html>

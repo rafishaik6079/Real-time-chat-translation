@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat - {{ group_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='global.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='chat.css') }}">
+</head>
+<body class="chat-page">
+
+<h2>Group: {{ group_name }}</h2>
+
+<!-- Exit Group Button -->
+<form method="POST" action="/exit_group/{{ group_id }}" style="all: unset; position: fixed; top: 20px; left: 20px; z-index: 1000;">
+    <button type="submit" class="exit-group-btn">Exit Group</button>
+</form>
+
+<!-- Dashboard Button -->
+<!-- Dashboard Button -->
+<form action="/dashboard" style="all: unset; position: fixed; top: 70px; left: 20px; z-index: 1000;">
+    <button type="submit" class="dashboard-btn">Back to Dashboard</button>
+</form>
+
+
+<!-- Add Member Button -->
+<div style="position: fixed; top: 20px; right: 20px; z-index: 1000;">
+    <button class="add-member-btn" onclick="document.getElementById('addDialog').showModal()">Add Member</button>
+</div>
+
+<!-- Remove Member Button -->
+<div style="position: fixed; top: 70px; right: 20px; z-index: 1000;">
+    <button class="remove-member-btn" onclick="document.getElementById('removeDialog').showModal()">Remove Member</button>
+</div>
+
+<!-- Chat Container -->
+<div class="chat-container">
+
+    <!-- Chat Interface -->
+    <div class="chat-interface">
+        <div class="chat-messages">
+            {% for msg in messages %}
+                <div class="message {{ 'you' if msg[1] == username else 'other' }}">
+                    <strong>{{ msg[1] }}:</strong> {{ msg[2] }}
+                </div>
+            {% endfor %}
+        </div>
+        <form method="POST" class="chat-input">
+            <input type="text" name="message" placeholder="Type a message..." required>
+            <button type="submit">Send</button>
+        </form>
+    </div>
+</div>
+
+<!-- Add Member Dialog -->
+<dialog id="addDialog">
+    <form method="POST" action="/add_member/{{ group_id }}">
+        <h3>Add Member</h3>
+        <input type="email" name="member_email" placeholder="User Email" required>
+        <div>
+            <button type="submit">Confirm</button>
+            <button type="button" onclick="document.getElementById('addDialog').close()">Cancel</button>
+        </div>
+    </form>
+</dialog>
+
+<!-- Remove Member Dialog -->
+<dialog id="removeDialog">
+    <form method="POST" action="/remove_member/{{ group_id }}">
+        <h3>Remove Member</h3>
+        <input type="email" name="member_email" placeholder="User Email" required>
+        <div>
+            <button type="submit">Confirm</button>
+            <button type="button" onclick="document.getElementById('removeDialog').close()">Cancel</button>
+        </div>
+    </form>
+</dialog>
+
+<!-- Success/Error Message -->
+{% if message %}
+<p class="info-message">{{ message }}</p>
+{% endif %}
+
+</body>
+</html>
