@@ -234,4 +234,5 @@ def handle_send(data):
 if __name__ == '__main__':
     initialize_database()
     port = int(os.environ.get("PORT", 5000))
+    initialize_database()
     socketio.run(app,debug=True, host="0.0.0.0", port=port)
