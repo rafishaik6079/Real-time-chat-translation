@@ -1,3 +1,6 @@
+import eventlet
+eventlet.monkey_patch()
+import os
 from flask import *
 from flask_socketio import SocketIO, emit, join_room
 import sqlite3
@@ -6,7 +9,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 DATABASE = 'users.db'
-socketio = SocketIO(app)
+socketio = SocketIO(app, async_mode='eventlet')
 
 # --- Database Setup ---
 def initialize_database():
@@ -230,4 +233,5 @@ def handle_send(data):
 # --- Run App ---
 if __name__ == '__main__':
     initialize_database()
-    socketio.run(app, debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    socketio.run(app,debug=True, host="0.0.0.0", port=port)
