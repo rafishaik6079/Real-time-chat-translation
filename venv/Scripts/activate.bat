@@ -8,7 +8,7 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-set VIRTUAL_ENV=C:\Users\Kiran Vijay\OneDrive\ドキュメント\Desktop\fullstack\venv
+set VIRTUAL_ENV=C:\fullstack_debug\venv
 
 if not defined PROMPT set PROMPT=$P$G
 

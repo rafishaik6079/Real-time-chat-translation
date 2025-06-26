@@ -1,10 +1,12 @@
-from flask import Flask, render_template, request, redirect, session
+from flask import *
+from flask_socketio import SocketIO, emit, join_room
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 DATABASE = 'users.db'
+socketio = SocketIO(app)
 
 # --- Database Setup ---
 def initialize_database():
@@ -32,12 +34,10 @@ def register():
         with sqlite3.connect(DATABASE) as db:
             cursor = db.cursor()
             cursor.execute("SELECT * FROM users WHERE email=?", (email,))
-            existing_user = cursor.fetchone()
-            if existing_user:
-                return "User already registered with this email"
+            if cursor.fetchone():
+                return "User already registered"
             cursor.execute("INSERT INTO users (name, email, password) VALUES (?, ?, ?)", (name, email, password))
         return redirect('/login')
-
     return render_template('register.html')
 
 # --- Login ---
@@ -51,11 +51,12 @@ def login():
         with sqlite3.connect(DATABASE) as db:
             cursor = db.cursor()
             cursor.execute("SELECT id, password FROM users WHERE email=? AND name=?", (email, name))
-            user_data = cursor.fetchone()
+            user = cursor.fetchone()
 
-            if user_data and check_password_hash(user_data[1], password):
-                session['user_id'] = user_data[0]
+            if user and check_password_hash(user[1], password):
+                session['user_id'] = user[0]
                 session['user_name'] = name
+                session['email'] = email
                 return redirect('/dashboard')
             else:
                 return "Invalid login"
@@ -66,19 +67,15 @@ def login():
 def dashboard():
     if 'user_id' not in session:
         return redirect('/login')
-    
-    user_id = session['user_id']
 
+    user_id = session['user_id']
     with sqlite3.connect(DATABASE) as db:
         cursor = db.cursor()
-        cursor.execute("""
-            SELECT groups.id, groups.name FROM groups
-            JOIN group_members ON groups.id = group_members.group_id
-            WHERE group_members.user_id = ?
-        """, (user_id,))
-        user_groups = cursor.fetchall()
-
-    return render_template('dashboard.html', groups=user_groups)
+        cursor.execute("""SELECT groups.id, groups.name FROM groups
+                          JOIN group_members ON groups.id = group_members.group_id
+                          WHERE group_members.user_id = ?""", (user_id,))
+        groups = cursor.fetchall()
+    return render_template('dashboard.html', groups=groups)
 
 # --- Create Group ---
 @app.route('/create_group', methods=['GET', 'POST'])
@@ -89,156 +86,148 @@ def create_group():
     if request.method == 'POST':
         group_name = request.form['group_name']
         creator_id = session['user_id']
-
         with sqlite3.connect(DATABASE) as db:
             cursor = db.cursor()
             cursor.execute("INSERT INTO groups (name, creator_id) VALUES (?, ?)", (group_name, creator_id))
-            new_group_id = cursor.lastrowid
-            cursor.execute("INSERT INTO group_members (group_id, user_id) VALUES (?, ?)", (new_group_id, creator_id))
+            group_id = cursor.lastrowid
+            cursor.execute("INSERT INTO group_members (group_id, user_id) VALUES (?, ?)", (group_id, creator_id))
         return redirect('/dashboard')
 
     return render_template('create_group.html')
 
-# --- Group Chat ---
-@app.route('/group/<int:group_id>', methods=['GET', 'POST'])
+# --- Group Chat Page ---
+@app.route('/group/<int:group_id>', methods=['GET'])
 def group_chat(group_id):
     if 'user_id' not in session:
         return redirect('/login')
 
     user_id = session['user_id']
     user_name = session['user_name']
-
     with sqlite3.connect(DATABASE) as db:
         cursor = db.cursor()
-
-        # Check if user is a member of the group
         cursor.execute("SELECT * FROM group_members WHERE group_id=? AND user_id=?", (group_id, user_id))
-        membership = cursor.fetchone()
+        if not cursor.fetchone():
+            return redirect('/dashboard')
 
-        if not membership:
-            return redirect('/')
+        cursor.execute("SELECT name, creator_id FROM groups WHERE id=?", (group_id,))
+        group = cursor.fetchone()
+        group_name, creator_id = group[0], group[1]
+        is_admin = user_id == creator_id
 
-        # Handle message send
-        if request.method == 'POST':
-            message = request.form['message']
-            cursor.execute("INSERT INTO messages (group_id, user_name, message) VALUES (?, ?, ?)", (group_id, user_name, message))
-
-        cursor.execute("SELECT name FROM groups WHERE id=?", (group_id,))
-        group_name = cursor.fetchone()[0]
         cursor.execute("SELECT * FROM messages WHERE group_id=?", (group_id,))
         messages = cursor.fetchall()
 
-    return render_template("chat.html", group_id=group_id, group_name=group_name, messages=messages)
+    return render_template("chat.html", group_id=group_id, group_name=group_name, messages=messages,
+                           username=user_name, is_admin=is_admin)
 
+# --- Add Member ---
 @app.route('/add_member/<int:group_id>', methods=['POST'])
 def add_member(group_id):
     if 'user_id' not in session:
         return redirect('/login')
-    
-    logged_in_user_id = session['user_id']
+    user_id = session['user_id']
     member_email = request.form['member_email']
 
     with sqlite3.connect(DATABASE) as db:
         cursor = db.cursor()
-
-        # Check group creator
         cursor.execute("SELECT creator_id FROM groups WHERE id=?", (group_id,))
         creator_id = cursor.fetchone()[0]
-
-        if logged_in_user_id != creator_id:
+        if user_id != creator_id:
             message = "Only the group creator can add members"
         else:
-            # Check if user exists
             cursor.execute("SELECT id FROM users WHERE email=?", (member_email,))
             user = cursor.fetchone()
-
             if not user:
                 message = "User is not registered"
             else:
-                user_id = user[0]
-                # Check if already in group
-                cursor.execute("SELECT * FROM group_members WHERE group_id=? AND user_id=?", (group_id, user_id))
+                new_user_id = user[0]
+                cursor.execute("SELECT * FROM group_members WHERE group_id=? AND user_id=?", (group_id, new_user_id))
                 if cursor.fetchone():
-                    message = "User already present in group"
+                    message = "User already in group"
                 else:
-                    cursor.execute("INSERT INTO group_members (group_id, user_id) VALUES (?, ?)", (group_id, user_id))
+                    cursor.execute("INSERT INTO group_members (group_id, user_id) VALUES (?, ?)", (group_id, new_user_id))
                     message = "Added successfully"
 
-        # Load chat info again
         cursor.execute("SELECT name FROM groups WHERE id=?", (group_id,))
         group_name = cursor.fetchone()[0]
         cursor.execute("SELECT * FROM messages WHERE group_id=?", (group_id,))
         messages = cursor.fetchall()
 
-    return render_template("chat.html", group_id=group_id, group_name=group_name, messages=messages, message=message)
+    return render_template("chat.html", group_id=group_id, group_name=group_name, messages=messages,
+                           message=message, is_admin=True, username=session['user_name'])
 
 # --- Remove Member ---
 @app.route('/remove_member/<int:group_id>', methods=['POST'])
 def remove_member(group_id):
     if 'user_id' not in session:
         return redirect('/login')
-
-    logged_in_user_id = session['user_id']
+    user_id = session['user_id']
     member_email = request.form['member_email']
 
     with sqlite3.connect(DATABASE) as db:
         cursor = db.cursor()
-
-        # Check group creator
         cursor.execute("SELECT creator_id FROM groups WHERE id=?", (group_id,))
         creator_id = cursor.fetchone()[0]
-
-        if logged_in_user_id != creator_id:
+        if user_id != creator_id:
             message = "Only the group creator can remove members"
         else:
-            # Check if user exists
             cursor.execute("SELECT id FROM users WHERE email=?", (member_email,))
             user = cursor.fetchone()
-
             if not user:
-                message = "User is not registered"
+                message = "User not registered"
             else:
-                user_id = user[0]
-                # Check if user is a member
-                cursor.execute("SELECT * FROM group_members WHERE group_id=? AND user_id=?", (group_id, user_id))
+                remove_id = user[0]
+                cursor.execute("SELECT * FROM group_members WHERE group_id=? AND user_id=?", (group_id, remove_id))
                 if not cursor.fetchone():
-                    message = "User is not a member of this group"
+                    message = "User not in group"
                 else:
-                    cursor.execute("DELETE FROM group_members WHERE group_id=? AND user_id=?", (group_id, user_id))
-                    message = "User removed successfully"
+                    cursor.execute("DELETE FROM group_members WHERE group_id=? AND user_id=?", (group_id, remove_id))
+                    message = "Removed successfully"
 
-        # Load updated messages
         cursor.execute("SELECT name FROM groups WHERE id=?", (group_id,))
         group_name = cursor.fetchone()[0]
         cursor.execute("SELECT * FROM messages WHERE group_id=?", (group_id,))
         messages = cursor.fetchall()
 
-    return render_template("chat.html", group_id=group_id, group_name=group_name, messages=messages, message=message)
+    return render_template("chat.html", group_id=group_id, group_name=group_name, messages=messages,
+                           message=message, is_admin=True, username=session['user_name'])
+
+# --- Exit Group ---
 @app.route('/exit_group/<int:group_id>', methods=['POST'])
 def exit_group(group_id):
     if 'user_id' not in session:
         return redirect('/login')
-
     user_id = session['user_id']
+    with sqlite3.connect(DATABASE) as db:
+        cursor = db.cursor()
+        cursor.execute("SELECT creator_id FROM groups WHERE id=?", (group_id,))
+        if user_id == cursor.fetchone()[0]:
+            return render_template('home.html', message="Creator cannot exit their group")
+        cursor.execute("DELETE FROM group_members WHERE group_id=? AND user_id=?", (group_id, user_id))
+    return redirect('/dashboard')
+
+# ================================
+# 🔌 Real-time Message Handling
+# ================================
+
+@socketio.on("join")
+def handle_join(data):
+    join_room(str(data["group_id"]))
+
+@socketio.on("send_message")
+def handle_send(data):
+    group_id = data["group_id"]
+    username = data["username"]
+    message = data["message"]
 
     with sqlite3.connect(DATABASE) as db:
         cursor = db.cursor()
+        cursor.execute("INSERT INTO messages (group_id, user_name, message) VALUES (?, ?, ?)", (group_id, username, message))
+        db.commit()
 
-        # Get group creator
-        cursor.execute("SELECT creator_id FROM groups WHERE id=?", (group_id,))
-        creator_id = cursor.fetchone()[0]
-
-        if user_id == creator_id:
-            # Group creator can't exit — redirect to home with message
-            return render_template('home.html', message="Group creator cannot exit their own group")
-
-        # Remove member from group
-        cursor.execute("DELETE FROM group_members WHERE group_id=? AND user_id=?", (group_id, user_id))
-
-    return redirect('/dashboard')
-
+    emit("receive_message", data, to=str(group_id))
 
 # --- Run App ---
 if __name__ == '__main__':
     initialize_database()
-    app.run(debug=True)
+    socketio.run(app, debug=True)

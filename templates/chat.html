@@ -15,12 +15,11 @@
 </form>
 
 <!-- Dashboard Button -->
-<!-- Dashboard Button -->
 <form action="/dashboard" style="all: unset; position: fixed; top: 70px; left: 20px; z-index: 1000;">
     <button type="submit" class="dashboard-btn">Back to Dashboard</button>
 </form>
 
-
+{% if is_admin %}
 <!-- Add Member Button -->
 <div style="position: fixed; top: 20px; right: 20px; z-index: 1000;">
     <button class="add-member-btn" onclick="document.getElementById('addDialog').showModal()">Add Member</button>
@@ -31,32 +30,13 @@
     <button class="remove-member-btn" onclick="document.getElementById('removeDialog').showModal()">Remove Member</button>
 </div>
 
-<!-- Chat Container -->
-<div class="chat-container">
-
-    <!-- Chat Interface -->
-    <div class="chat-interface">
-        <div class="chat-messages">
-            {% for msg in messages %}
-                <div class="message {{ 'you' if msg[1] == username else 'other' }}">
-                    <strong>{{ msg[1] }}:</strong> {{ msg[2] }}
-                </div>
-            {% endfor %}
-        </div>
-        <form method="POST" class="chat-input">
-            <input type="text" name="message" placeholder="Type a message..." required>
-            <button type="submit">Send</button>
-        </form>
-    </div>
-</div>
-
 <!-- Add Member Dialog -->
 <dialog id="addDialog">
     <form method="POST" action="/add_member/{{ group_id }}">
-        <h3>Add Member</h3>
-        <input type="email" name="member_email" placeholder="User Email" required>
+        <label>Member Email:</label>
+        <input type="email" name="member_email" required>
         <div>
-            <button type="submit">Confirm</button>
+            <button type="submit">Add</button>
             <button type="button" onclick="document.getElementById('addDialog').close()">Cancel</button>
         </div>
     </form>
@@ -65,19 +45,73 @@
 <!-- Remove Member Dialog -->
 <dialog id="removeDialog">
     <form method="POST" action="/remove_member/{{ group_id }}">
-        <h3>Remove Member</h3>
-        <input type="email" name="member_email" placeholder="User Email" required>
+        <label>Member Email:</label>
+        <input type="email" name="member_email" required>
         <div>
-            <button type="submit">Confirm</button>
+            <button type="submit">Remove</button>
             <button type="button" onclick="document.getElementById('removeDialog').close()">Cancel</button>
         </div>
     </form>
 </dialog>
+{% endif %}
+
+<!-- Chat Container -->
+<div class="chat-container">
+    <div class="chat-interface">
+        <div class="chat-messages" id="chatMessages">
+            {% for msg in messages %}
+                <div class="message {{ 'you' if msg[1] == username else 'other' }}">
+                    <strong>{{ msg[1] }}:</strong> {{ msg[2] }}
+                </div>
+            {% endfor %}
+        </div>
+        <div class="chat-input">
+            <input type="text" id="messageInput" placeholder="Type a message..." required>
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+</div>
 
 <!-- Success/Error Message -->
 {% if message %}
 <p class="info-message">{{ message }}</p>
 {% endif %}
+
+<!-- Real-Time Socket.IO Script -->
+<script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+<script>
+    const socket = io();
+    const groupId = "{{ group_id }}";
+    const username = "{{ username }}";
+
+    // Join room
+    socket.emit("join", { group_id: groupId });
+
+    // Send message
+    function sendMessage() {
+        const input = document.getElementById("messageInput");
+        const message = input.value.trim();
+        if (!message) return;
+
+        socket.emit("send_message", {
+            group_id: groupId,
+            username: username,
+            message: message
+        });
+
+        input.value = "";
+    }
+
+    // Receive message
+    socket.on("receive_message", (data) => {
+        const messagesDiv = document.getElementById("chatMessages");
+        const newDiv = document.createElement("div");
+        newDiv.className = "message " + (data.username === username ? "you" : "other");
+        newDiv.innerHTML = `<strong>${data.username}:</strong> ${data.message}`;
+        messagesDiv.appendChild(newDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    });
+</script>
 
 </body>
 </html>
