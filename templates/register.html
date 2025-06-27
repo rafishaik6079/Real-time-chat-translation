@@ -12,6 +12,18 @@
             <input type="text" name="name" placeholder="Name" required>
             <input type="email" name="email" placeholder="Email" required>
             <input type="password" name="password" placeholder="Password" required>
+
+            <label for="language" style="margin-top: 10px;">Select Your Language:</label>
+            <select name="language" id="language" required>
+                <option value="" disabled selected>Select language</option>
+                <option value="English">English</option>
+                <option value="Hindi">Hindi</option>
+                <option value="Telugu">Telugu</option>
+                <option value="Tamil">Tamil</option>
+                <option value="Kannada">Kannada</option>
+            </select>
+            <small style="color: red;">* This can be selected only once</small>
+
             <button class="register-btn" type="submit">Register</button>
         </form>
         <a href="/" class="home-btn">Back to Home</a>

@@ -9,24 +9,44 @@
 
 <h2>Group: {{ group_name }}</h2>
 
-<!-- Exit Group Button -->
-<form method="POST" action="/exit_group/{{ group_id }}" style="all: unset; position: fixed; top: 20px; left: 20px; z-index: 1000;">
+{% if message %}
+<div style="color: green; font-weight: bold; margin: 10px 0; text-align: center;">
+    {{ message }}
+</div>
+{% endif %}
+
+<!-- Exit Group -->
+<form method="POST" action="/exit_group/{{ group_id }}" style="all: unset; position: fixed; top: 20px; left: 20px;">
     <button type="submit" class="exit-group-btn">Exit Group</button>
 </form>
 
-<!-- Dashboard Button -->
-<form action="/dashboard" style="all: unset; position: fixed; top: 70px; left: 20px; z-index: 1000;">
+<!-- Dashboard -->
+<form action="/dashboard" style="all: unset; position: fixed; top: 70px; left: 20px;">
     <button type="submit" class="dashboard-btn">Back to Dashboard</button>
 </form>
 
+<!-- Show Members -->
+<div style="position: fixed; top: 120px; left: 20px;">
+    <button onclick="toggleMembers()" class="dashboard-btn">Show Members</button>
+</div>
+
+<!-- Member List -->
+<div id="memberList" style="display:none; position: absolute; top: 170px; left: 20px; background-color: white; border-radius: 10px; padding: 15px; box-shadow: 0 0 10px rgba(0,0,0,0.2); z-index: 999;">
+    <h3 style="margin-top: 0;">Group Members:</h3>
+    <ul style="list-style: none; padding: 0;">
+        {% for member in members %}
+            <li>{{ member[0] }} ({{ member[1] }})</li>
+        {% endfor %}
+    </ul>
+</div>
+
 {% if is_admin %}
-<!-- Add Member Button -->
-<div style="position: fixed; top: 20px; right: 20px; z-index: 1000;">
+<!-- Admin Controls -->
+<div style="position: fixed; top: 20px; right: 20px;">
     <button class="add-member-btn" onclick="document.getElementById('addDialog').showModal()">Add Member</button>
 </div>
 
-<!-- Remove Member Button -->
-<div style="position: fixed; top: 70px; right: 20px; z-index: 1000;">
+<div style="position: fixed; top: 70px; right: 20px;">
     <button class="remove-member-btn" onclick="document.getElementById('removeDialog').showModal()">Remove Member</button>
 </div>
 
@@ -55,7 +75,7 @@
 </dialog>
 {% endif %}
 
-<!-- Chat Container -->
+<!-- Chat Messages -->
 <div class="chat-container">
     <div class="chat-interface">
         <div class="chat-messages" id="chatMessages">
@@ -65,52 +85,19 @@
                 </div>
             {% endfor %}
         </div>
-        <div class="chat-input">
-            <input type="text" id="messageInput" placeholder="Type a message..." required>
-            <button onclick="sendMessage()">Send</button>
-        </div>
+        <!-- Chat Input -->
+        <form class="chat-input" method="POST" action="/group/{{ group_id }}" style="display: flex;">
+            <input type="text" name="message" placeholder="Type a message..." required style="flex: 1;">
+            <button type="submit">Send</button>
+        </form>
     </div>
 </div>
 
-<!-- Success/Error Message -->
-{% if message %}
-<p class="info-message">{{ message }}</p>
-{% endif %}
-
-<!-- Real-Time Socket.IO Script -->
-<script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
 <script>
-    const socket = io();
-    const groupId = "{{ group_id }}";
-    const username = "{{ username }}";
-
-    // Join room
-    socket.emit("join", { group_id: groupId });
-
-    // Send message
-    function sendMessage() {
-        const input = document.getElementById("messageInput");
-        const message = input.value.trim();
-        if (!message) return;
-
-        socket.emit("send_message", {
-            group_id: groupId,
-            username: username,
-            message: message
-        });
-
-        input.value = "";
+    function toggleMembers() {
+        const list = document.getElementById("memberList");
+        list.style.display = list.style.display === "none" ? "block" : "none";
     }
-
-    // Receive message
-    socket.on("receive_message", (data) => {
-        const messagesDiv = document.getElementById("chatMessages");
-        const newDiv = document.createElement("div");
-        newDiv.className = "message " + (data.username === username ? "you" : "other");
-        newDiv.innerHTML = `<strong>${data.username}:</strong> ${data.message}`;
-        messagesDiv.appendChild(newDiv);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    });
 </script>
 
 </body>

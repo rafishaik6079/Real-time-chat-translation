@@ -141,3 +141,19 @@ dialog form button:hover {
     background-color: #306bd1;
     border-color: #306bd1;
 }
+#memberList {
+    position: absolute;
+    top: 170px;
+    left: 20px;
+    background-color: white;
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    z-index: 999;
+}
+
+#memberList ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
