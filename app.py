@@ -1,15 +1,11 @@
-import eventlet
-eventlet.monkey_patch()
 import os
 from flask import *
-from flask_socketio import SocketIO, emit, join_room
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 DATABASE = 'users.db'
-socketio = SocketIO(app, async_mode='eventlet')
 
 
 def initialize_database():
@@ -19,10 +15,35 @@ def initialize_database():
         cursor.execute("DROP TABLE IF EXISTS groups")
         cursor.execute("DROP TABLE IF EXISTS group_members")
         cursor.execute("DROP TABLE IF EXISTS messages")
-        cursor.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT, email TEXT UNIQUE, password TEXT, language TEXT)")
-        cursor.execute("CREATE TABLE IF NOT EXISTS groups (id INTEGER PRIMARY KEY, name TEXT, creator_id INTEGER)")
-        cursor.execute("CREATE TABLE IF NOT EXISTS group_members (group_id INTEGER, user_id INTEGER)")
-        cursor.execute("CREATE TABLE IF NOT EXISTS messages (group_id INTEGER, user_name TEXT, message TEXT)")
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY, 
+                name TEXT, 
+                email TEXT UNIQUE, 
+                password TEXT, 
+                language TEXT
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS groups (
+                id INTEGER PRIMARY KEY, 
+                name TEXT, 
+                creator_id INTEGER
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS group_members (
+                group_id INTEGER, 
+                user_id INTEGER
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS messages (
+                group_id INTEGER, 
+                user_name TEXT, 
+                message TEXT
+            )
+        """)
         db.commit()
 
 @app.route('/')
@@ -42,8 +63,10 @@ def register():
             cursor.execute("SELECT * FROM users WHERE email=?", (email,))
             if cursor.fetchone():
                 return "User already registered"
-            cursor.execute("INSERT INTO users (name, email, password, language) VALUES (?, ?, ?, ?)",
-                           (name, email, password, language))
+            cursor.execute(
+                "INSERT INTO users (name, email, password, language) VALUES (?, ?, ?, ?)",
+                (name, email, password, language)
+            )
         return redirect('/login')
     return render_template('register.html')
 
@@ -74,13 +97,15 @@ def dashboard():
         return redirect('/login')
 
     user_id = session['user_id']
-    user_name = session['user_name']  # Get the username
+    user_name = session['user_name']
 
     with sqlite3.connect(DATABASE) as db:
         cursor = db.cursor()
-        cursor.execute("""SELECT groups.id, groups.name FROM groups
-                          JOIN group_members ON groups.id = group_members.group_id
-                          WHERE group_members.user_id = ?""", (user_id,))
+        cursor.execute("""
+            SELECT groups.id, groups.name FROM groups
+            JOIN group_members ON groups.id = group_members.group_id
+            WHERE group_members.user_id = ?
+        """, (user_id,))
         groups = cursor.fetchall()
 
     return render_template('dashboard.html', groups=groups, username=user_name)
@@ -113,79 +138,34 @@ def group_chat(group_id):
     with sqlite3.connect(DATABASE) as db:
         cursor = db.cursor()
 
-        # Check if user is part of the group
         cursor.execute("SELECT * FROM group_members WHERE group_id=? AND user_id=?", (group_id, user_id))
         if not cursor.fetchone():
             return redirect('/dashboard')
 
         message = None
 
-        # Handle only if form contains message
         if request.method == 'POST' and 'message' in request.form:
             text = request.form['message']
-            cursor.execute("INSERT INTO messages (group_id, user_name, message) VALUES (?, ?, ?)",
-                           (group_id, user_name, text))
+            cursor.execute(
+                "INSERT INTO messages (group_id, user_name, message) VALUES (?, ?, ?)",
+                (group_id, user_name, text)
+            )
             db.commit()
             message = "Message sent!"
 
-        # Group info
         cursor.execute("SELECT name, creator_id FROM groups WHERE id=?", (group_id,))
         group = cursor.fetchone()
         group_name, creator_id = group[0], group[1]
         is_admin = user_id == creator_id
 
-        # Fetch messages
         cursor.execute("SELECT * FROM messages WHERE group_id=?", (group_id,))
         messages = cursor.fetchall()
 
-        # Fetch members
-        cursor.execute("""SELECT users.name, users.language FROM users
-                          JOIN group_members ON users.id = group_members.user_id
-                          WHERE group_members.group_id = ?""", (group_id,))
-        members = cursor.fetchall()
-
-    return render_template("chat.html", group_id=group_id, group_name=group_name,
-                           messages=messages, username=user_name,
-                           is_admin=is_admin, members=members, message=message)
-
-    if 'user_id' not in session:
-        return redirect('/login')
-
-    user_id = session['user_id']
-    user_name = session['user_name']
-
-    with sqlite3.connect(DATABASE) as db:
-        cursor = db.cursor()
-
-        # Check if user is part of the group
-        cursor.execute("SELECT * FROM group_members WHERE group_id=? AND user_id=?", (group_id, user_id))
-        if not cursor.fetchone():
-            return redirect('/dashboard')
-
-        message = None
-
-        # Only insert if message is posted
-        if request.method == 'POST' and 'message' in request.form:
-            text = request.form['message']
-            cursor.execute("INSERT INTO messages (group_id, user_name, message) VALUES (?, ?, ?)",
-                           (group_id, user_name, text))
-            db.commit()
-            message = "Message sent!"
-
-        # Get group info
-        cursor.execute("SELECT name, creator_id FROM groups WHERE id=?", (group_id,))
-        group = cursor.fetchone()
-        group_name, creator_id = group[0], group[1]
-        is_admin = user_id == creator_id
-
-        # Fetch messages
-        cursor.execute("SELECT * FROM messages WHERE group_id=?", (group_id,))
-        messages = cursor.fetchall()
-
-        # Fetch members
-        cursor.execute("""SELECT users.name, users.language FROM users
-                          JOIN group_members ON users.id = group_members.user_id
-                          WHERE group_members.group_id = ?""", (group_id,))
+        cursor.execute("""
+            SELECT users.name, users.language FROM users
+            JOIN group_members ON users.id = group_members.user_id
+            WHERE group_members.group_id = ?
+        """, (group_id,))
         members = cursor.fetchall()
 
     return render_template("chat.html", group_id=group_id, group_name=group_name,
@@ -223,9 +203,11 @@ def add_member(group_id):
         group_name = cursor.fetchone()[0]
         cursor.execute("SELECT * FROM messages WHERE group_id=?", (group_id,))
         messages = cursor.fetchall()
-        cursor.execute("""SELECT users.name, users.language FROM users
-                          JOIN group_members ON users.id = group_members.user_id
-                          WHERE group_members.group_id = ?""", (group_id,))
+        cursor.execute("""
+            SELECT users.name, users.language FROM users
+            JOIN group_members ON users.id = group_members.user_id
+            WHERE group_members.group_id = ?
+        """, (group_id,))
         members = cursor.fetchall()
 
     return render_template("chat.html", group_id=group_id, group_name=group_name, messages=messages,
@@ -262,9 +244,11 @@ def remove_member(group_id):
         group_name = cursor.fetchone()[0]
         cursor.execute("SELECT * FROM messages WHERE group_id=?", (group_id,))
         messages = cursor.fetchall()
-        cursor.execute("""SELECT users.name, users.language FROM users
-                          JOIN group_members ON users.id = group_members.user_id
-                          WHERE group_members.group_id = ?""", (group_id,))
+        cursor.execute("""
+            SELECT users.name, users.language FROM users
+            JOIN group_members ON users.id = group_members.user_id
+            WHERE group_members.group_id = ?
+        """, (group_id,))
         members = cursor.fetchall()
 
     return render_template("chat.html", group_id=group_id, group_name=group_name, messages=messages,
