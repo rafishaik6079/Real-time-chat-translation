@@ -1,26 +1,44 @@
+/* create_group.css */
+
+:root {
+    --primary-color: #1E88E5;
+    --accent-color: #1565C0;
+    --bg-color: #f0f2f5;
+    --light-color: #ffffff;
+    --text-color: #2c2626;
+    --border-radius: 12px;
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    --font: Arial, sans-serif;
+}
+
 body {
-    font-family: Arial, sans-serif;
-    background-color: #f0f2f5;
+    font-family: var(--font);
+    background-color: var(--bg-color);
     margin: 0;
     padding: 0;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
+    color: var(--text-color);
 }
 
 .form-container {
-    background: #fff;
+    background: var(--light-color);
     padding: 40px 30px;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
     text-align: center;
-    width: 300px;
+    width: 90%;
+    max-width: 400px;
+    box-sizing: border-box;
 }
 
 h2 {
     margin-bottom: 20px;
-    color: #2c2626;
+    color: var(--text-color);
+    font-weight: 600;
+    font-size: 1.6em;
 }
 
 form input[type="text"] {
@@ -30,32 +48,51 @@ form input[type="text"] {
     border: 1px solid #ccc;
     border-radius: 8px;
     font-size: 14px;
+    box-sizing: border-box;
 }
 
 form button {
     width: 100%;
     padding: 12px;
-    background-color: #4285f4;
+    background-color: var(--primary-color);
     border: none;
     border-radius: 8px;
     color: white;
     font-weight: bold;
     cursor: pointer;
     font-size: 14px;
+    transition: background-color 0.3s ease;
 }
 
 form button:hover {
-    background-color: #306bd1;
+    background-color: var(--accent-color);
 }
 
 .back-link {
     display: inline-block;
     margin-top: 20px;
-    color: #4285f4;
+    color: var(--primary-color);
     text-decoration: none;
     font-weight: bold;
+    transition: text-decoration 0.3s ease;
 }
 
 .back-link:hover {
     text-decoration: underline;
+}
+
+@media screen and (max-width: 480px) {
+    .form-container {
+        padding: 30px 20px;
+        width: 95%;
+    }
+
+    h2 {
+        font-size: 1.4em;
+    }
+
+    form button {
+        font-size: 13px;
+        padding: 10px;
+    }
 }

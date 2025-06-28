@@ -1,19 +1,38 @@
+:root {
+    --primary-color: #1E40AF;
+    --accent-color: #2563EB;
+    --success-color: #16A34A;
+    --danger-color: #DC2626;
+    --bg-light: #F3F4F6;
+    --bg-message-other: #E0E7FF;
+    --bg-message-you: #D1FAE5;
+    --text-color: #111827;
+    --shadow-light: 0 0 12px rgba(0, 0, 0, 0.1);
+    --shadow-dialog: 0 4px 20px rgba(0, 0, 0, 0.3);
+    --border-radius: 12px;
+    --font-family: Arial, sans-serif;
+}
+
 .chat-container {
     display: flex;
     justify-content: center;
     margin-top: 40px;
+    padding: 0 10px;
+    box-sizing: border-box;
+    background-color: var(--bg-light);
 }
 
 .chat-interface {
-    background: #fff;
-    border-radius: 12px;
+    background: white;
+    border-radius: var(--border-radius);
     width: 100%;
     max-width: 600px;
     height: 75vh;
     padding: 20px;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-light);
+    box-sizing: border-box;
 }
 
 .chat-messages {
@@ -32,17 +51,19 @@
     max-width: 80%;
     word-wrap: break-word;
     font-size: 14px;
+    box-sizing: border-box;
+    color: var(--text-color);
 }
 
 .message.you {
     align-self: flex-end;
-    background-color: #dcf8c6;
+    background-color: var(--bg-message-you);
     text-align: right;
 }
 
 .message.other {
     align-self: flex-start;
-    background-color: #f1f0f0;
+    background-color: var(--bg-message-other);
     text-align: left;
 }
 
@@ -57,58 +78,83 @@
     flex: 1;
     padding: 10px;
     border: 1px solid #ccc;
-    border-radius: 10px;
+    border-radius: var(--border-radius);
+    font-size: 14px;
+    box-sizing: border-box;
 }
 
 .chat-input button {
     padding: 10px 18px;
     border: none;
-    background-color: #4285f4;
+    background-color: var(--primary-color);
     color: white;
-    border-radius: 10px;
+    border-radius: var(--border-radius);
     cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+.chat-input button:hover {
+    background-color: var(--accent-color);
 }
 
 /* Admin buttons styling */
-.add-member-btn, .remove-member-btn {
+.add-member-btn,
+.remove-member-btn {
     width: 140px;
     padding: 8px;
     border: none;
-    background-color: #4285f4;
+    background-color: var(--primary-color);
     color: white;
     font-weight: bold;
-    border-radius: 8px;
+    border-radius: var(--border-radius);
     margin-bottom: 10px;
     cursor: pointer;
+    transition: background-color 0.3s ease;
 }
 
-.exit-group-btn, .dashboard-btn {
+.add-member-btn:hover,
+.remove-member-btn:hover {
+    background-color: var(--accent-color);
+}
+
+.exit-group-btn,
+.dashboard-btn {
     width: 140px;
     padding: 8px;
     border: none;
-    border-radius: 8px;
+    border-radius: var(--border-radius);
     font-weight: bold;
     color: white;
     cursor: pointer;
     margin-bottom: 10px;
+    transition: background-color 0.3s ease;
 }
 
 .exit-group-btn {
-    background-color: #f44336;
+    background-color: var(--danger-color);
+}
+
+.exit-group-btn:hover {
+    background-color: #b91c1c;
 }
 
 .dashboard-btn {
-    background-color: #007bff;
+    background-color: #2563EB;
+}
+
+.dashboard-btn:hover {
+    background-color: #1E40AF;
 }
 
 dialog {
     border: none;
-    border-radius: 10px;
+    border-radius: var(--border-radius);
     padding: 20px;
     width: 320px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    background-color: #ffffff;
-    font-family: Arial, sans-serif;
+    box-shadow: var(--shadow-dialog);
+    background-color: white;
+    font-family: var(--font-family);
 }
 
 dialog::backdrop {
@@ -122,38 +168,70 @@ dialog form input {
     border-radius: 6px;
     border: 1px solid #ccc;
     font-size: 14px;
+    box-sizing: border-box;
 }
 
 dialog form button {
     padding: 8px 16px;
     margin: 5px 0;
     border-radius: 6px;
-    border: 1px solid #4285f4;
-    background-color: #4285f4;
+    border: 1px solid var(--primary-color);
+    background-color: var(--primary-color);
     color: white;
     cursor: pointer;
     font-weight: bold;
     display: block;
     width: 100%;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 dialog form button:hover {
-    background-color: #306bd1;
-    border-color: #306bd1;
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
 }
+
 #memberList {
     position: absolute;
     top: 170px;
     left: 20px;
     background-color: white;
-    border-radius: 10px;
+    border-radius: var(--border-radius);
     padding: 15px;
     box-shadow: 0 0 10px rgba(0,0,0,0.2);
     z-index: 999;
+    max-width: 300px;
+    max-height: 400px;
+    overflow-y: auto;
+    box-sizing: border-box;
 }
 
 #memberList ul {
     list-style: none;
     padding: 0;
     margin: 0;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 650px) {
+    .chat-interface {
+        height: 70vh;
+        max-width: 95vw;
+        padding: 15px;
+    }
+
+    .chat-input input[type="text"], .chat-input button {
+        font-size: 13px;
+    }
+
+    .add-member-btn, .remove-member-btn,
+    .exit-group-btn, .dashboard-btn {
+        width: 100%;
+        padding: 10px;
+    }
+
+    #memberList {
+        top: 140px;
+        left: 10px;
+        max-width: 90vw;
+    }
 }
