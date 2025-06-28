@@ -134,6 +134,53 @@ def group_chat(group_id):
 
     user_id = session['user_id']
     user_name = session['user_name']
+    message = None
+
+    with sqlite3.connect(DATABASE) as db:
+        cursor = db.cursor()
+
+        # Ensure user is a member of the group
+        cursor.execute("SELECT * FROM group_members WHERE group_id=? AND user_id=?", (group_id, user_id))
+        if not cursor.fetchone():
+            return redirect('/dashboard')
+
+        # Handle message sending
+        if request.method == 'POST' and 'message' in request.form:
+            text = request.form['message']
+            cursor.execute(
+                "INSERT INTO messages (group_id, user_name, message) VALUES (?, ?, ?)",
+                (group_id, user_name, text)
+            )
+            db.commit()
+            return redirect(url_for('group_chat', group_id=group_id))  # Prevent duplicate on reload
+
+        # Group info
+        cursor.execute("SELECT name, creator_id FROM groups WHERE id=?", (group_id,))
+        group = cursor.fetchone()
+        group_name, creator_id = group[0], group[1]
+        is_admin = user_id == creator_id
+
+        # Fetch messages
+        cursor.execute("SELECT * FROM messages WHERE group_id=?", (group_id,))
+        messages = cursor.fetchall()
+
+        # Fetch members
+        cursor.execute("""
+            SELECT users.name, users.language FROM users
+            JOIN group_members ON users.id = group_members.user_id
+            WHERE group_members.group_id = ?
+        """, (group_id,))
+        members = cursor.fetchall()
+
+    return render_template("chat.html", group_id=group_id, group_name=group_name,
+                           messages=messages, username=user_name,
+                           is_admin=is_admin, members=members, message=message)
+
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    user_id = session['user_id']
+    user_name = session['user_name']
 
     with sqlite3.connect(DATABASE) as db:
         cursor = db.cursor()
@@ -171,6 +218,25 @@ def group_chat(group_id):
     return render_template("chat.html", group_id=group_id, group_name=group_name,
                            messages=messages, username=user_name,
                            is_admin=is_admin, members=members, message=message)
+@app.route('/chat_area/<int:group_id>')
+def chat_area(group_id):
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    user_id = session['user_id']
+    user_name = session['user_name']
+
+    with sqlite3.connect(DATABASE) as db:
+        cursor = db.cursor()
+
+        cursor.execute("SELECT * FROM group_members WHERE group_id=? AND user_id=?", (group_id, user_id))
+        if not cursor.fetchone():
+            return redirect('/dashboard')
+
+        cursor.execute("SELECT * FROM messages WHERE group_id=?", (group_id,))
+        messages = cursor.fetchall()
+
+    return render_template("chat_area.html", messages=messages, username=user_name)
 
 @app.route('/add_member/<int:group_id>', methods=['POST'])
 def add_member(group_id):

@@ -4,6 +4,12 @@
     <title>Chat - {{ group_name }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='global.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='chat.css') }}">
+    <style>
+        #chatArea {
+            max-height: 75vh;
+            overflow-y: auto;
+        }
+    </style>
 </head>
 <body class="chat-page">
 
@@ -78,16 +84,11 @@
 <!-- Chat Messages -->
 <div class="chat-container">
     <div class="chat-interface">
-        <div class="chat-messages" id="chatMessages">
-            {% for msg in messages %}
-                <div class="message {{ 'you' if msg[1] == username else 'other' }}">
-                    <strong>{{ msg[1] }}:</strong> {{ msg[2] }}
-                </div>
-            {% endfor %}
-        </div>
+        <div id="chatArea"></div>
+
         <!-- Chat Input -->
-        <form class="chat-input" method="POST" action="/group/{{ group_id }}" style="display: flex;">
-            <input type="text" name="message" placeholder="Type a message..." required style="flex: 1;">
+        <form id="messageForm" class="chat-input" style="display: flex;">
+            <input type="text" id="messageInput" name="message" placeholder="Type a message..." required style="flex: 1;">
             <button type="submit">Send</button>
         </form>
     </div>
@@ -98,6 +99,45 @@
         const list = document.getElementById("memberList");
         list.style.display = list.style.display === "none" ? "block" : "none";
     }
+
+    const chatArea = document.getElementById("chatArea");
+    const messageForm = document.getElementById("messageForm");
+    const messageInput = document.getElementById("messageInput");
+
+    function loadChat(preserveScroll = true) {
+        const prevScrollTop = chatArea.scrollTop;
+        const prevScrollHeight = chatArea.scrollHeight;
+
+        fetch("/chat_area/{{ group_id }}")
+            .then(res => res.text())
+            .then(html => {
+                chatArea.innerHTML = html;
+                if (preserveScroll) {
+                    const newScrollHeight = chatArea.scrollHeight;
+                    chatArea.scrollTop = prevScrollTop + (newScrollHeight - prevScrollHeight);
+                }
+            });
+    }
+
+    messageForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+        const message = messageInput.value.trim();
+        if (message === "") return;
+
+        fetch("/group/{{ group_id }}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: `message=${encodeURIComponent(message)}`
+        }).then(() => {
+            messageInput.value = "";
+            loadChat(false);  // Don't preserve scroll when user sends a message
+        });
+    });
+
+    setInterval(() => loadChat(true), 1000);
+    window.onload = () => loadChat(true);
 </script>
 
 </body>
