@@ -1,45 +1,27 @@
-/* register.css */
-
-:root {
-    --primary-color: #1E88E5;
-    --accent-color: #1565C0;
-    --danger-color: #F44336;
-    --danger-hover: #d32f2f;
-    --bg-color: #f0f2f5;
-    --light-color: #ffffff;
-    --text-color: #333;
-    --border-radius: 12px;
-    --shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-    --font: Arial, sans-serif;
-}
-
+/* === register.css === */
 body {
     margin: 0;
     padding: 0;
-    background: var(--bg-color);
-    font-family: var(--font);
+    background: #f0f2f5;
+    font-family: Arial, sans-serif;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
-    color: var(--text-color);
-    text-align: center;
 }
 
 .register-container {
-    background: var(--light-color);
+    background: #ffffff;
     padding: 40px 30px;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow);
-    width: 90%;
-    max-width: 360px;
-    box-sizing: border-box;
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+    width: 320px;
+    text-align: center;
 }
 
 h2 {
     margin-bottom: 25px;
-    color: var(--text-color);
-    font-size: 1.5em;
+    color: #333;
 }
 
 input[type="text"],
@@ -56,8 +38,8 @@ input[type="password"] {
 
 .register-btn {
     width: 100%;
-    padding: 12px;
-    background-color: var(--primary-color);
+    padding: 10px;
+    background-color: #4285f4;
     color: white;
     font-size: 15px;
     font-weight: bold;
@@ -68,7 +50,7 @@ input[type="password"] {
 }
 
 .register-btn:hover {
-    background-color: var(--accent-color);
+    background-color: #306bd1;
 }
 
 .home-btn {
@@ -76,8 +58,8 @@ input[type="password"] {
     margin-top: 20px;
     width: 100%;
     text-align: center;
-    padding: 12px 0;
-    background-color: var(--danger-color);
+    padding: 10px 0;
+    background-color: #f44336;
     color: white;
     font-weight: bold;
     text-decoration: none;
@@ -86,16 +68,5 @@ input[type="password"] {
 }
 
 .home-btn:hover {
-    background-color: var(--danger-hover);
-}
-
-@media screen and (max-width: 600px) {
-    .register-container {
-        padding: 30px 20px;
-        width: 90%;
-    }
-
-    h2 {
-        font-size: 1.3em;
-    }
+    background-color: #d32f2f;
 }

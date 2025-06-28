@@ -1,51 +1,33 @@
-/* home.css */
-
-:root {
-    --primary-color: #1E88E5;
-    --accent-color: #1565C0;
-    --success-color: #4CAF50;
-    --danger-color: #F44336;
-    --bg-color: #f5f5f5;
-    --light-color: #ffffff;
-    --text-color: #333;
-    --border-radius: 12px;
-    --shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-    --font: Arial, sans-serif;
-}
-
+/* === home.css === */
 body {
     margin: 0;
     padding: 0;
-    background-color: var(--bg-color);
-    font-family: var(--font);
+    background-color: #f5f5f5;
+    font-family: Arial, sans-serif;
     height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    text-align: center;
-    color: var(--text-color);
 }
 
 .home-container {
-    background: var(--light-color);
+    text-align: center;
+    background: #ffffff;
     padding: 40px;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow);
-    width: 90%;
-    max-width: 400px;
+    border-radius: 12px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+    width: 350px;
 }
 
 h1 {
-    color: var(--text-color);
+    color: #333;
     margin-bottom: 30px;
-    font-size: 1.8em;
 }
 
 .button-group {
     display: flex;
     justify-content: center;
     gap: 20px;
-    flex-wrap: wrap;
 }
 
 .home-btn {
@@ -53,7 +35,7 @@ h1 {
     text-decoration: none;
     color: white;
     font-weight: bold;
-    border-radius: var(--border-radius);
+    border-radius: 8px;
     font-size: 14px;
     transition: background-color 0.3s ease;
     display: inline-block;
@@ -62,31 +44,17 @@ h1 {
 }
 
 .register-btn {
-    background-color: var(--primary-color);
+    background-color: #4285f4;
 }
 
 .register-btn:hover {
-    background-color: var(--accent-color);
+    background-color: #306bd1;
 }
 
 .login-btn {
-    background-color: var(--success-color);
+    background-color: #4caf50;
 }
 
 .login-btn:hover {
     background-color: #388e3c;
-}
-
-@media screen and (max-width: 600px) {
-    .home-container {
-        padding: 20px;
-    }
-
-    h1 {
-        font-size: 1.5em;
-    }
-
-    .home-btn {
-        width: 100%;
-    }
 }

@@ -1,39 +1,25 @@
 /* Updated static/style.css */
 
-:root {
-    --primary-color: #1E88E5;
-    --accent-color: #1565C0;
-    --success-color: #4CAF50;
-    --danger-color: #F44336;
-    --bg-color: #f4f4f4;
-    --light-color: #ffffff;
-    --text-color: #333;
-    --border-radius: 8px;
-    --shadow: 0 0 10px rgba(0,0,0,0.1);
-    --font: Arial, sans-serif;
-}
-
 body {
-    font-family: var(--font);
-    background-color: var(--bg-color);
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
     margin: 0;
     padding: 0;
     text-align: center;
-    color: var(--text-color);
 }
 
 h2, h3 {
     margin-top: 20px;
-    color: var(--text-color);
+    color: #333;
 }
 
 form, .group-list {
-    background: var(--light-color);
+    background: #fff;
     max-width: 400px;
     margin: 30px auto;
     padding: 20px;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow);
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
 
 input[type="text"],
@@ -46,25 +32,23 @@ textarea {
     border: 1px solid #ccc;
     border-radius: 5px;
     display: block;
-    box-sizing: border-box;
 }
 
 button, a {
     display: inline-block;
     padding: 10px 20px;
     margin: 10px 5px;
-    background-color: var(--primary-color);
+    background-color: #4285f4;
     color: white;
     text-decoration: none;
-    border: 1px solid var(--primary-color);
-    border-radius: var(--border-radius);
+    border: 1px solid #4285f4;
+    border-radius: 8px;
     cursor: pointer;
     font-weight: bold;
-    transition: background-color 0.3s ease;
 }
 
 button:hover, a:hover {
-    background-color: var(--accent-color);
+    background-color: #306bd1;
 }
 
 .group-list ul {
@@ -78,28 +62,26 @@ button:hover, a:hover {
 
 .chat-container {
     display: flex;
-    flex-direction: row;
     justify-content: center;
     align-items: flex-start;
     margin: 30px auto;
     gap: 20px;
     padding: 20px;
     max-width: 90vw;
-    flex-wrap: wrap;
 }
 
 .chat-interface {
-    flex: 1 1 100%;
-    background: var(--light-color);
-    border-radius: var(--border-radius);
-    width: 100%;
-    max-width: 600px;
+    flex: 1;
+    background: #fff;
+    border-radius: 10px;
+    width: 50vw;
     height: 70vh;
     padding: 20px;
+    position: relative;
     display: flex;
     flex-direction: column;
     overflow-y: auto;
-    box-shadow: var(--shadow);
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
 
 .message {
@@ -128,12 +110,10 @@ button:hover, a:hover {
     margin-top: auto;
     padding-top: 15px;
     border-top: 1px solid #ccc;
-    flex-wrap: wrap;
 }
 
 .chat-input input[type="text"] {
-    flex: 1 1 auto;
-    min-width: 200px;
+    flex: 1;
     margin-right: 10px;
     border: 1px solid #ccc;
     border-radius: 8px;
@@ -167,30 +147,4 @@ button.popup-button {
     border-radius: 6px;
     border: 1px solid #ccc;
     margin-bottom: 10px;
-}
-
-@media screen and (max-width: 768px) {
-    .chat-interface {
-        width: 100%;
-        height: 60vh;
-    }
-
-    .chat-input {
-        flex-direction: column;
-    }
-
-    button, a {
-        width: 100%;
-    }
-
-    input[type="text"],
-    input[type="email"],
-    input[type="password"],
-    textarea {
-        width: 100%;
-    }
-
-    form, .group-list {
-        width: 90%;
-    }
 }
