@@ -131,47 +131,24 @@
 
     // Load chat messages, optionally preserving scroll position
     function loadChat(preserveScroll = true) {
-    const prevScrollTop = chatArea.scrollTop;
-    const prevScrollHeight = chatArea.scrollHeight;
+        const prevScrollTop = chatArea.scrollTop;
+        const prevScrollHeight = chatArea.scrollHeight;
 
-    fetch("/chat_area/{{ group_id }}")
-        .then(res => res.text())
-        .then(html => {
-            chatArea.innerHTML = html;
-            if (preserveScroll) {
-                // Preserve scroll position during auto-refresh
-                const newScrollHeight = chatArea.scrollHeight;
-                chatArea.scrollTop = prevScrollTop + (newScrollHeight - prevScrollHeight);
-            } else {
-                // Scroll to bottom when new message sent
-                chatArea.scrollTop = chatArea.scrollHeight;
-            }
-        });
-}
+        fetch("/chat_area/{{ group_id }}")
+            .then(res => res.text())
+            .then(html => {
+                chatArea.innerHTML = html;
+                if (preserveScroll) {
+                    // Preserve scroll position during auto-refresh
+                    const newScrollHeight = chatArea.scrollHeight;
+                    chatArea.scrollTop = prevScrollTop + (newScrollHeight - prevScrollHeight);
+                } else {
+                    // Scroll to bottom when new message sent
+                    chatArea.scrollTop = chatArea.scrollHeight;
+                }
+            });
+    }
 
-messageForm.addEventListener("submit", function (e) {
-    e.preventDefault();
-    const message = messageInput.value.trim();
-    if (message === "") return;
-
-    fetch("/group/{{ group_id }}", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: `message=${encodeURIComponent(message)}`
-    }).then(() => {
-        messageInput.value = "";
-        loadChat(false);  // scroll to bottom on send
-    });
-});
-
-// Poll for new messages every second, preserving scroll on auto-refresh
-setInterval(() => loadChat(true), 1000);
-window.onload = () => loadChat(true);
-
-
-    // Send message without page reload
     messageForm.addEventListener("submit", function (e) {
         e.preventDefault();
         const message = messageInput.value.trim();
@@ -185,14 +162,15 @@ window.onload = () => loadChat(true);
             body: `message=${encodeURIComponent(message)}`
         }).then(() => {
             messageInput.value = "";
-            loadChat(false);  // Do not preserve scroll on sending new message
+            loadChat(false);  // scroll to bottom on send
         });
     });
 
-    // Poll for new messages every second, preserving scroll position
-    setInterval(() => loadChat(true), 1000);
+    // Poll for new messages every second, preserving scroll on auto-refresh
+    setInterval(() => loadChat(true), 500);
     window.onload = () => loadChat(true);
 </script>
+
 
 </body>
 </html>
