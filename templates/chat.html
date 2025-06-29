@@ -9,6 +9,18 @@
             max-height: 75vh;
             overflow-y: auto;
         }
+        /* Responsive body for chat page */
+        body.chat-page {
+            margin: 0 10px;
+            max-width: 100vw;
+            overflow-x: hidden;
+        }
+        h2 {
+            margin-left: 0;
+            padding-top: 10px;
+            text-align: center;
+            font-size: 1.5rem;
+        }
     </style>
 </head>
 <body class="chat-page">
@@ -21,23 +33,26 @@
 </div>
 {% endif %}
 
-<!-- Exit Group -->
-<form method="POST" action="/exit_group/{{ group_id }}" style="all: unset; position: fixed; top: 20px; left: 20px;">
-    <button type="submit" class="exit-group-btn">Exit Group</button>
-</form>
-
-<!-- Dashboard -->
-<form action="/dashboard" style="all: unset; position: fixed; top: 70px; left: 20px;">
-    <button type="submit" class="dashboard-btn">Back to Dashboard</button>
-</form>
-
-<!-- Show Members -->
-<div style="position: fixed; top: 120px; left: 20px;">
-    <button onclick="toggleMembers()" class="dashboard-btn">Show Members</button>
+<!-- Dropdown menu replacing all buttons, positioned top right -->
+<div class="dropdown">
+    <button id="dropBtn" class="dropbtn" aria-expanded="false">Menu &#9662;</button>
+    <div id="dropContent" class="dropdown-content" aria-hidden="true">
+        <form method="POST" action="/exit_group/{{ group_id }}">
+            <button type="submit">Exit Group</button>
+        </form>
+        <form action="/dashboard">
+            <button type="submit">Back to Dashboard</button>
+        </form>
+        <button type="button" onclick="toggleMembers()">Show Members</button>
+        {% if is_admin %}
+        <button type="button" onclick="document.getElementById('addDialog').showModal()">Add Member</button>
+        <button type="button" onclick="document.getElementById('removeDialog').showModal()">Remove Member</button>
+        {% endif %}
+    </div>
 </div>
 
 <!-- Member List -->
-<div id="memberList" style="display:none; position: absolute; top: 170px; left: 20px; background-color: white; border-radius: 10px; padding: 15px; box-shadow: 0 0 10px rgba(0,0,0,0.2); z-index: 999;">
+<div id="memberList" style="display:none; position: absolute; top: 60px; left: 20px; background-color: white; border-radius: 10px; padding: 15px; box-shadow: 0 0 10px rgba(0,0,0,0.2); z-index: 999;">
     <h3 style="margin-top: 0;">Group Members:</h3>
     <ul style="list-style: none; padding: 0;">
         {% for member in members %}
@@ -46,17 +61,8 @@
     </ul>
 </div>
 
+<!-- Admin dialogs -->
 {% if is_admin %}
-<!-- Admin Controls -->
-<div style="position: fixed; top: 20px; right: 20px;">
-    <button class="add-member-btn" onclick="document.getElementById('addDialog').showModal()">Add Member</button>
-</div>
-
-<div style="position: fixed; top: 70px; right: 20px;">
-    <button class="remove-member-btn" onclick="document.getElementById('removeDialog').showModal()">Remove Member</button>
-</div>
-
-<!-- Add Member Dialog -->
 <dialog id="addDialog">
     <form method="POST" action="/add_member/{{ group_id }}">
         <label>Member Email:</label>
@@ -68,7 +74,6 @@
     </form>
 </dialog>
 
-<!-- Remove Member Dialog -->
 <dialog id="removeDialog">
     <form method="POST" action="/remove_member/{{ group_id }}">
         <label>Member Email:</label>
@@ -81,12 +86,11 @@
 </dialog>
 {% endif %}
 
-<!-- Chat Messages -->
+<!-- Chat Messages and Input -->
 <div class="chat-container">
     <div class="chat-interface">
         <div id="chatArea"></div>
 
-        <!-- Chat Input -->
         <form id="messageForm" class="chat-input" style="display: flex;">
             <input type="text" id="messageInput" name="message" placeholder="Type a message..." required style="flex: 1;">
             <button type="submit">Send</button>
@@ -95,30 +99,79 @@
 </div>
 
 <script>
+    // Toggle members list visibility
     function toggleMembers() {
         const list = document.getElementById("memberList");
         list.style.display = list.style.display === "none" ? "block" : "none";
     }
 
+    // Dropdown toggle on click
+    const dropBtn = document.getElementById("dropBtn");
+    const dropContent = document.getElementById("dropContent");
+
+    dropBtn.addEventListener("click", () => {
+        const isOpen = dropContent.style.display === "block";
+        dropContent.style.display = isOpen ? "none" : "block";
+        dropBtn.setAttribute("aria-expanded", !isOpen);
+        dropContent.setAttribute("aria-hidden", isOpen);
+    });
+
+    // Close dropdown if clicking outside
+    document.addEventListener("click", (event) => {
+        if (!dropBtn.contains(event.target) && !dropContent.contains(event.target)) {
+            dropContent.style.display = "none";
+            dropBtn.setAttribute("aria-expanded", false);
+            dropContent.setAttribute("aria-hidden", true);
+        }
+    });
+
     const chatArea = document.getElementById("chatArea");
     const messageForm = document.getElementById("messageForm");
     const messageInput = document.getElementById("messageInput");
 
+    // Load chat messages, optionally preserving scroll position
     function loadChat(preserveScroll = true) {
-        const prevScrollTop = chatArea.scrollTop;
-        const prevScrollHeight = chatArea.scrollHeight;
+    const prevScrollTop = chatArea.scrollTop;
+    const prevScrollHeight = chatArea.scrollHeight;
 
-        fetch("/chat_area/{{ group_id }}")
-            .then(res => res.text())
-            .then(html => {
-                chatArea.innerHTML = html;
-                if (preserveScroll) {
-                    const newScrollHeight = chatArea.scrollHeight;
-                    chatArea.scrollTop = prevScrollTop + (newScrollHeight - prevScrollHeight);
-                }
-            });
-    }
+    fetch("/chat_area/{{ group_id }}")
+        .then(res => res.text())
+        .then(html => {
+            chatArea.innerHTML = html;
+            if (preserveScroll) {
+                // Preserve scroll position during auto-refresh
+                const newScrollHeight = chatArea.scrollHeight;
+                chatArea.scrollTop = prevScrollTop + (newScrollHeight - prevScrollHeight);
+            } else {
+                // Scroll to bottom when new message sent
+                chatArea.scrollTop = chatArea.scrollHeight;
+            }
+        });
+}
 
+messageForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    const message = messageInput.value.trim();
+    if (message === "") return;
+
+    fetch("/group/{{ group_id }}", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: `message=${encodeURIComponent(message)}`
+    }).then(() => {
+        messageInput.value = "";
+        loadChat(false);  // scroll to bottom on send
+    });
+});
+
+// Poll for new messages every second, preserving scroll on auto-refresh
+setInterval(() => loadChat(true), 1000);
+window.onload = () => loadChat(true);
+
+
+    // Send message without page reload
     messageForm.addEventListener("submit", function (e) {
         e.preventDefault();
         const message = messageInput.value.trim();
@@ -132,10 +185,11 @@
             body: `message=${encodeURIComponent(message)}`
         }).then(() => {
             messageInput.value = "";
-            loadChat(false);  // Don't preserve scroll when user sends a message
+            loadChat(false);  // Do not preserve scroll on sending new message
         });
     });
 
+    // Poll for new messages every second, preserving scroll position
     setInterval(() => loadChat(true), 1000);
     window.onload = () => loadChat(true);
 </script>
