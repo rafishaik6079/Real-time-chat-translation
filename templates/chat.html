@@ -99,13 +99,11 @@
 </div>
 
 <script>
-    // Toggle members list visibility
     function toggleMembers() {
         const list = document.getElementById("memberList");
         list.style.display = list.style.display === "none" ? "block" : "none";
     }
 
-    // Dropdown toggle on click
     const dropBtn = document.getElementById("dropBtn");
     const dropContent = document.getElementById("dropContent");
 
@@ -116,7 +114,6 @@
         dropContent.setAttribute("aria-hidden", isOpen);
     });
 
-    // Close dropdown if clicking outside
     document.addEventListener("click", (event) => {
         if (!dropBtn.contains(event.target) && !dropContent.contains(event.target)) {
             dropContent.style.display = "none";
@@ -129,8 +126,11 @@
     const messageForm = document.getElementById("messageForm");
     const messageInput = document.getElementById("messageInput");
 
-    // Load chat messages, optionally preserving scroll position
+    let isTranslating = false;
+
     function loadChat(preserveScroll = true) {
+        if (isTranslating) return; // prevent reload during translation
+
         const prevScrollTop = chatArea.scrollTop;
         const prevScrollHeight = chatArea.scrollHeight;
 
@@ -139,12 +139,26 @@
             .then(html => {
                 chatArea.innerHTML = html;
                 if (preserveScroll) {
-                    // Preserve scroll position during auto-refresh
                     const newScrollHeight = chatArea.scrollHeight;
                     chatArea.scrollTop = prevScrollTop + (newScrollHeight - prevScrollHeight);
                 } else {
-                    // Scroll to bottom when new message sent
                     chatArea.scrollTop = chatArea.scrollHeight;
+                }
+            });
+    }
+
+    function checkTranslationStatus() {
+        fetch("/chat_status/{{ group_id }}")
+            .then(res => res.json())
+            .then(data => {
+                if (data.ready) {
+                    isTranslating = false;
+                    document.querySelector("#messageForm button").disabled = false;
+                    document.querySelector("#messageForm button").textContent = "Send";
+                    messageInput.value = "";
+                    loadChat(false);
+                } else {
+                    setTimeout(checkTranslationStatus, 300); // check again soon
                 }
             });
     }
@@ -154,6 +168,10 @@
         const message = messageInput.value.trim();
         if (message === "") return;
 
+        isTranslating = true;
+        document.querySelector("#messageForm button").disabled = true;
+        document.querySelector("#messageForm button").textContent = "Translating...";
+
         fetch("/group/{{ group_id }}", {
             method: "POST",
             headers: {
@@ -161,15 +179,17 @@
             },
             body: `message=${encodeURIComponent(message)}`
         }).then(() => {
-            messageInput.value = "";
-            loadChat(false);  // scroll to bottom on send
+            checkTranslationStatus();
         });
     });
 
-    // Poll for new messages every second, preserving scroll on auto-refresh
-    setInterval(() => loadChat(true), 500);
+    // Poll every 0.5s only if not translating
+    setInterval(() => {
+        if (!isTranslating) loadChat(true);
+    }, 500);
     window.onload = () => loadChat(true);
 </script>
+
 
 
 </body>

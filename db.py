@@ -1,13 +1,19 @@
 import sqlite3
 
-def view_table(table_name):
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    cursor.execute(f"SELECT * FROM {table_name}")
-    rows = cursor.fetchall()
-    for row in rows:
-        print(row)
-    conn.close()
+DATABASE = 'users.db'
 
-# Example usage
-view_table('messages')
+with sqlite3.connect(DATABASE) as db:
+    cursor = db.cursor()
+
+    # Count total users
+    cursor.execute("SELECT COUNT(*) FROM users")
+    total_users = cursor.fetchone()[0]
+    print(f"Total users: {total_users}")
+
+    # List user names and their selected languages
+    cursor.execute("SELECT name, language FROM users")
+    users = cursor.fetchall()
+
+    print("\nUser list with languages:")
+    for name, language in users:
+        print(f" - {name}: {language}")

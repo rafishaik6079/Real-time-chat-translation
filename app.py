@@ -2,11 +2,11 @@ import os
 from flask import *
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
+from deep_translator import GoogleTranslator
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 DATABASE = 'users.db'
-
 
 def initialize_database():
     with sqlite3.connect(DATABASE) as db:
@@ -15,6 +15,8 @@ def initialize_database():
         cursor.execute("DROP TABLE IF EXISTS groups")
         cursor.execute("DROP TABLE IF EXISTS group_members")
         cursor.execute("DROP TABLE IF EXISTS messages")
+        cursor.execute("DROP TABLE IF EXISTS translations")
+
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY, 
@@ -39,9 +41,19 @@ def initialize_database():
         """)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS messages (
-                group_id INTEGER, 
-                user_name TEXT, 
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                group_id INTEGER,
+                user_name TEXT,
                 message TEXT
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS translations (
+                group_id INTEGER,
+                original_message_id INTEGER,
+                user_id INTEGER,
+                translated_message TEXT,
+                PRIMARY KEY (group_id, original_message_id, user_id)
             )
         """)
         db.commit()
@@ -139,32 +151,63 @@ def group_chat(group_id):
     with sqlite3.connect(DATABASE) as db:
         cursor = db.cursor()
 
-        # Ensure user is a member of the group
+        # Verify user is a member of the group
         cursor.execute("SELECT * FROM group_members WHERE group_id=? AND user_id=?", (group_id, user_id))
         if not cursor.fetchone():
             return redirect('/dashboard')
 
-        # Handle message sending
+        # Handle message submission
         if request.method == 'POST' and 'message' in request.form:
             text = request.form['message']
-            cursor.execute(
-                "INSERT INTO messages (group_id, user_name, message) VALUES (?, ?, ?)",
-                (group_id, user_name, text)
-            )
-            db.commit()
-            return redirect(url_for('group_chat', group_id=group_id))  # Prevent duplicate on reload
 
-        # Group info
+            try:
+                english_version = GoogleTranslator(source='auto', target='en').translate(text)
+            except Exception:
+                english_version = text
+
+            # Save original message (as entered by user)
+            cursor.execute("INSERT INTO messages (group_id, user_name, message) VALUES (?, ?, ?)",
+                           (group_id, user_name, text))
+            message_id = cursor.lastrowid
+
+            # Translate English to each member's language and store
+            cursor.execute("""
+                SELECT users.id, users.language FROM users
+                JOIN group_members ON users.id = group_members.user_id
+                WHERE group_members.group_id = ?
+            """, (group_id,))
+            members = cursor.fetchall()
+
+            for member_id, lang in members:
+                try:
+                    translated = GoogleTranslator(source='en', target=lang).translate(english_version)
+                except Exception:
+                    translated = english_version
+                cursor.execute("""
+                    INSERT OR REPLACE INTO translations (group_id, original_message_id, user_id, translated_message)
+                    VALUES (?, ?, ?, ?)
+                """, (group_id, message_id, member_id, translated))
+
+            db.commit()
+            return redirect(url_for('group_chat', group_id=group_id))
+
+        # Get group name and admin info
         cursor.execute("SELECT name, creator_id FROM groups WHERE id=?", (group_id,))
         group = cursor.fetchone()
         group_name, creator_id = group[0], group[1]
         is_admin = user_id == creator_id
 
-        # Fetch messages
-        cursor.execute("SELECT * FROM messages WHERE group_id=?", (group_id,))
+        # Fetch translated messages for this user
+        cursor.execute("""
+            SELECT m.user_name, t.translated_message
+            FROM messages m
+            JOIN translations t ON m.id = t.original_message_id
+            WHERE m.group_id=? AND t.user_id=?
+            ORDER BY m.id
+        """, (group_id, user_id))
         messages = cursor.fetchall()
 
-        # Fetch members
+        # Fetch group members
         cursor.execute("""
             SELECT users.name, users.language FROM users
             JOIN group_members ON users.id = group_members.user_id
@@ -175,68 +218,6 @@ def group_chat(group_id):
     return render_template("chat.html", group_id=group_id, group_name=group_name,
                            messages=messages, username=user_name,
                            is_admin=is_admin, members=members, message=message)
-
-    if 'user_id' not in session:
-        return redirect('/login')
-
-    user_id = session['user_id']
-    user_name = session['user_name']
-
-    with sqlite3.connect(DATABASE) as db:
-        cursor = db.cursor()
-
-        cursor.execute("SELECT * FROM group_members WHERE group_id=? AND user_id=?", (group_id, user_id))
-        if not cursor.fetchone():
-            return redirect('/dashboard')
-
-        message = None
-
-        if request.method == 'POST' and 'message' in request.form:
-            text = request.form['message']
-            cursor.execute(
-                "INSERT INTO messages (group_id, user_name, message) VALUES (?, ?, ?)",
-                (group_id, user_name, text)
-            )
-            db.commit()
-            message = "Message sent!"
-
-        cursor.execute("SELECT name, creator_id FROM groups WHERE id=?", (group_id,))
-        group = cursor.fetchone()
-        group_name, creator_id = group[0], group[1]
-        is_admin = user_id == creator_id
-
-        cursor.execute("SELECT * FROM messages WHERE group_id=?", (group_id,))
-        messages = cursor.fetchall()
-
-        cursor.execute("""
-            SELECT users.name, users.language FROM users
-            JOIN group_members ON users.id = group_members.user_id
-            WHERE group_members.group_id = ?
-        """, (group_id,))
-        members = cursor.fetchall()
-
-    return render_template("chat.html", group_id=group_id, group_name=group_name,
-                           messages=messages, username=user_name,
-                           is_admin=is_admin, members=members, message=message)
-@app.route('/chat_area/<int:group_id>')
-def chat_area(group_id):
-    if 'user_id' not in session:
-        return redirect('/login')
-
-    user_id = session['user_id']
-    user_name = session['user_name']
-
-    with sqlite3.connect(DATABASE) as db:
-        cursor = db.cursor()
-
-        cursor.execute("SELECT * FROM group_members WHERE group_id=? AND user_id=?", (group_id, user_id))
-        if not cursor.fetchone():
-            return redirect('/dashboard')
-
-        cursor.execute("SELECT * FROM messages WHERE group_id=?", (group_id,))
-        messages = cursor.fetchall()
-
-    return render_template("chat_area.html", messages=messages, username=user_name)
 
 @app.route('/add_member/<int:group_id>', methods=['POST'])
 def add_member(group_id):
@@ -338,8 +319,58 @@ def exit_group(group_id):
                 return render_template('home.html', message="No one left to assign ownership")
         cursor.execute("DELETE FROM group_members WHERE group_id=? AND user_id=?", (group_id, user_id))
     return redirect('/dashboard')
+@app.route('/chat_area/<int:group_id>')
+def chat_area(group_id):
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    user_id = session['user_id']
+    user_name = session['user_name']
+
+    with sqlite3.connect(DATABASE) as db:
+        cursor = db.cursor()
+
+        # Check if user is in the group
+        cursor.execute("SELECT * FROM group_members WHERE group_id=? AND user_id=?", (group_id, user_id))
+        if not cursor.fetchone():
+            return "Unauthorized", 403
+
+        # Fetch translated messages for this user
+        cursor.execute("""
+            SELECT m.user_name, t.translated_message
+            FROM messages m
+            JOIN translations t ON m.id = t.original_message_id
+            WHERE m.group_id=? AND t.user_id=?
+            ORDER BY m.id
+        """, (group_id, user_id))
+        messages = cursor.fetchall()
+
+    return render_template("chat_area.html", messages=messages, username=user_name)
+@app.route('/chat_status/<int:group_id>')
+def chat_status(group_id):
+    if 'user_id' not in session:
+        return jsonify({"ready": False})
+
+    user_id = session['user_id']
+    with sqlite3.connect(DATABASE) as db:
+        cursor = db.cursor()
+
+        # Get the most recent message ID in this group
+        cursor.execute("SELECT MAX(id) FROM messages WHERE group_id=?", (group_id,))
+        last_message_id = cursor.fetchone()[0]
+
+        if not last_message_id:
+            return jsonify({"ready": True})  # No messages yet
+
+        # Check if a translation exists for the current user
+        cursor.execute("""SELECT 1 FROM translations
+                          WHERE group_id=? AND original_message_id=? AND user_id=?""",
+                       (group_id, last_message_id, user_id))
+        translated = cursor.fetchone() is not None
+
+    return jsonify({"ready": translated})
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     host = '0.0.0.0' if os.environ.get('RENDER') else '127.0.0.1'
-    app.run(debug=not os.environ.get('RENDER'), host=host, port=port)
+    app.run(debug=True, host=host, port=port, use_reloader=False)

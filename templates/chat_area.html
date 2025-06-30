@@ -2,17 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Chat Messages</title>
 </head>
 <body>
     <div class="chat-messages" id="chatMessages">
-    {% for msg in messages %}
-        <div class="message {{ 'you' if msg[1] == username else 'other' }}">
-            <strong>{{ msg[1] }}:</strong> {{ msg[2] }}
-        </div>
-    {% endfor %}
-</div>
-    
+        {% for sender, message in messages %}
+    <div class="message {{ 'you' if sender == username else 'other' }}">
+        <strong>{{ sender }}:</strong> {{ message }}
+    </div>
+{% endfor %}
+
+
+
+    </div>
 </body>
 </html>
