@@ -4,6 +4,22 @@
     <title>Home</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='home.css') }}">
 </head>
+<a href="/admin_login" class="admin-login-btn">Admin Login</a>
+
+<style>
+.admin-login-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #333;
+    color: white;
+    padding: 10px 14px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14px;
+}
+</style>
+
 <body>
     <div class="home-container">
         <h1>Welcome to Group Chat</h1>

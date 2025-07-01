@@ -3,7 +3,8 @@ from flask import *
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
 from deep_translator import GoogleTranslator
-
+ADMIN_EMAIL = "kiranvijay1414@gmail.com"
+ADMIN_PASSWORD = "vijay143"
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 DATABASE = 'users.db'
@@ -369,6 +370,74 @@ def chat_status(group_id):
         translated = cursor.fetchone() is not None
 
     return jsonify({"ready": translated})
+
+#admin login
+@app.route('/admin_login', methods=['GET', 'POST'])
+def admin_login():
+    if request.method == 'POST':
+        email = request.form['email'].strip()
+        password = request.form['password'].strip()
+
+        if email == ADMIN_EMAIL and password == ADMIN_PASSWORD:
+            session['is_admin'] = True
+            return redirect('/admin_dashboard')
+        else:
+            return render_template('admin_login.html', error="Invalid credentials")
+    return render_template('admin_login.html')
+
+#admin dashboard
+@app.route('/admin_dashboard')
+def admin_dashboard():
+    if not session.get('is_admin'):
+        return redirect('/admin_login')
+    
+    with sqlite3.connect(DATABASE) as db:
+        cursor = db.cursor()
+        cursor.execute("SELECT * FROM users")
+        users = cursor.fetchall()
+        cursor.execute("SELECT * FROM groups")
+        groups = cursor.fetchall()
+    
+    return render_template('admin_dashboard.html', users=users, groups=groups)
+
+#admin delete options
+@app.route('/admin/delete_user/<int:user_id>')
+def delete_user(user_id):
+    if not session.get('is_admin'):
+        return redirect('/admin_login')
+    with sqlite3.connect(DATABASE) as db:
+        cursor = db.cursor()
+        cursor.execute("DELETE FROM users WHERE id=?", (user_id,))
+        cursor.execute("DELETE FROM group_members WHERE user_id=?", (user_id,))
+        cursor.execute("DELETE FROM translations WHERE user_id=?", (user_id,))
+    return redirect('/admin_dashboard')
+
+@app.route('/admin/delete_user/<int:user_id>')
+def delete_user(user_id):
+    if not session.get('is_admin'):
+        return redirect('/admin_login')
+    with sqlite3.connect(DATABASE) as db:
+        cursor = db.cursor()
+        cursor.execute("DELETE FROM users WHERE id=?", (user_id,))
+        cursor.execute("DELETE FROM group_members WHERE user_id=?", (user_id,))
+        cursor.execute("DELETE FROM translations WHERE user_id=?", (user_id,))
+    return redirect('/admin_dashboard')
+
+@app.route('/admin/delete_message/<int:message_id>')
+def delete_message(message_id):
+    if not session.get('is_admin'):
+        return redirect('/admin_login')
+    with sqlite3.connect(DATABASE) as db:
+        cursor = db.cursor()
+        cursor.execute("DELETE FROM messages WHERE id=?", (message_id,))
+        cursor.execute("DELETE FROM translations WHERE original_message_id=?", (message_id,))
+    return redirect('/admin_dashboard')
+
+#admin logout
+@app.route('/admin_logout')
+def admin_logout():
+    session.pop('is_admin', None)
+    return redirect('/')
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
