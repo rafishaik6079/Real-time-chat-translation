@@ -6,89 +6,105 @@
     <style>
         body {
             font-family: 'Segoe UI', sans-serif;
-            background-color: #f2f2f2;
+            background: #f5f5f5;
             padding: 20px;
-            color: #333;
         }
         h1 {
             text-align: center;
-            color: #222;
         }
-        h2 {
-            margin-top: 40px;
-            border-bottom: 2px solid #ccc;
-            padding-bottom: 5px;
+        .tab-buttons {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .tab-buttons button {
+            margin: 0 10px;
+            padding: 10px 20px;
+            border: none;
+            background: #333;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .tab-buttons button.active {
+            background: #007bff;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
         }
         ul {
             list-style: none;
-            padding-left: 0;
+            padding: 0;
         }
         li {
-            background: #fff;
-            margin-bottom: 10px;
-            padding: 12px 15px;
-            border-radius: 6px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            background: white;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 8px;
         }
         .delete {
             color: red;
-            font-weight: bold;
+            float: right;
             text-decoration: none;
-            padding: 4px 8px;
             border: 1px solid red;
-            border-radius: 4px;
-            transition: 0.2s;
+            padding: 2px 6px;
+            border-radius: 5px;
         }
-        .delete:hover {
-            background-color: red;
-            color: white;
-        }
-        a.logout {
-            display: block;
-            text-align: center;
-            margin-top: 40px;
-            font-weight: bold;
-            color: #fff;
-            background: #444;
-            padding: 10px 20px;
-            border-radius: 6px;
-            text-decoration: none;
-            width: 200px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        a.logout:hover {
-            background: #222;
+        .member {
+            margin-top: 5px;
+            background: #f0f0f0;
+            padding: 8px;
+            border-radius: 5px;
         }
     </style>
+    <script>
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-buttons button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            document.getElementById(tabId + '-btn').classList.add('active');
+        }
+    </script>
 </head>
 <body>
     <h1>Admin Dashboard</h1>
+    
+    <div class="tab-buttons">
+        <button id="users-btn" onclick="showTab('users')" class="active">Users</button>
+        <button id="groups-btn" onclick="showTab('groups')">Groups</button>
+    </div>
 
-    <h2>Users</h2>
-    <ul>
-        {% for user in users %}
-            <li>
-                {{ user[0] }} - {{ user[1] }} ({{ user[4] }})
-                <a href="/admin/delete_user/{{ user[0] }}" class="delete" onclick="return confirm('Delete user?')">🗑️</a>
-            </li>
-        {% endfor %}
-    </ul>
+    <!-- Users Tab -->
+    <div id="users" class="tab-content active">
+        <ul>
+            {% for user in users %}
+                <li>
+                    {{ user[0] }} - {{ user[1] }} ({{ user[4] }})
+                    <a class="delete" href="/admin/delete_user/{{ user[0] }}" onclick="return confirm('Delete user?')">🗑️</a>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
 
-    <h2>Groups</h2>
-    <ul>
-        {% for group in groups %}
-            <li>
-                {{ group[0] }} - {{ group[1] }}
-                <a href="/admin/delete_group/{{ group[0] }}" class="delete" onclick="return confirm('Delete group?')">🗑️</a>
-            </li>
-        {% endfor %}
-    </ul>
-
-   
+    <!-- Groups Tab -->
+    <div id="groups" class="tab-content">
+        <ul>
+            {% for group in groups %}
+                <li>
+                    <strong>{{ group[0] }} - {{ group[1] }}</strong>
+                    <a class="delete" href="/admin/delete_group/{{ group[0] }}" onclick="return confirm('Delete group?')">🗑️</a>
+                    {% for member in group_members.get(group[0], []) %}
+                        <div class="member">
+                            {{ member[1] }} ({{ member[2] }})
+                            <a class="delete" href="/admin/remove_member/{{ group[0] }}/{{ member[0] }}" onclick="return confirm('Remove member?')">❌</a>
+                        </div>
+                    {% endfor %}
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
 
     <a href="/admin_logout" class="logout">Logout</a>
 </body>

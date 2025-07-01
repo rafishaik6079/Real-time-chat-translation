@@ -6,6 +6,8 @@ from deep_translator import GoogleTranslator
 ADMIN_EMAIL = "kiranvijay1414@gmail.com"
 ADMIN_PASSWORD = "vijay143"
 app = Flask(__name__)
+app.jinja_env.cache = {}
+
 app.secret_key = 'your_secret_key'
 DATABASE = 'users.db'
 
@@ -395,22 +397,24 @@ def admin_dashboard():
         cursor = db.cursor()
         cursor.execute("SELECT * FROM users")
         users = cursor.fetchall()
+
         cursor.execute("SELECT * FROM groups")
         groups = cursor.fetchall()
-    
-    return render_template('admin_dashboard.html', users=users, groups=groups)
+
+        group_members = {}
+        for group in groups:
+            group_id = group[0]
+            cursor.execute("""
+                SELECT users.id, users.name, users.language 
+                FROM users 
+                JOIN group_members ON users.id = group_members.user_id 
+                WHERE group_members.group_id=?
+            """, (group_id,))
+            group_members[group_id] = cursor.fetchall()
+
+    return render_template('admin_dashboard.html', users=users, groups=groups, group_members=group_members)
 
 #admin delete options
-@app.route('/admin/delete_user/<int:user_id>')
-def delete_user(user_id):
-    if not session.get('is_admin'):
-        return redirect('/admin_login')
-    with sqlite3.connect(DATABASE) as db:
-        cursor = db.cursor()
-        cursor.execute("DELETE FROM users WHERE id=?", (user_id,))
-        cursor.execute("DELETE FROM group_members WHERE user_id=?", (user_id,))
-        cursor.execute("DELETE FROM translations WHERE user_id=?", (user_id,))
-    return redirect('/admin_dashboard')
 
 @app.route('/admin/delete_user/<int:user_id>')
 def delete_user(user_id):
@@ -418,20 +422,67 @@ def delete_user(user_id):
         return redirect('/admin_login')
     with sqlite3.connect(DATABASE) as db:
         cursor = db.cursor()
-        cursor.execute("DELETE FROM users WHERE id=?", (user_id,))
-        cursor.execute("DELETE FROM group_members WHERE user_id=?", (user_id,))
+
+        # Get all message IDs sent by this user
+        cursor.execute("SELECT id FROM messages WHERE user_name = (SELECT name FROM users WHERE id=?)", (user_id,))
+        message_ids = [row[0] for row in cursor.fetchall()]
+
+        # Delete translations related to this user's messages
+        for msg_id in message_ids:
+            cursor.execute("DELETE FROM translations WHERE original_message_id=?", (msg_id,))
+
+        # Delete user's messages
+        cursor.execute("DELETE FROM messages WHERE user_name = (SELECT name FROM users WHERE id=?)", (user_id,))
+
+        # Delete translations received by this user
         cursor.execute("DELETE FROM translations WHERE user_id=?", (user_id,))
+
+        # Remove from all group memberships
+        cursor.execute("DELETE FROM group_members WHERE user_id=?", (user_id,))
+
+        # Delete the user account
+        cursor.execute("DELETE FROM users WHERE id=?", (user_id,))
+
     return redirect('/admin_dashboard')
 
-@app.route('/admin/delete_message/<int:message_id>')
-def delete_message(message_id):
+
+@app.route('/admin/delete_group/<int:group_id>')
+def delete_group(group_id):
     if not session.get('is_admin'):
         return redirect('/admin_login')
     with sqlite3.connect(DATABASE) as db:
         cursor = db.cursor()
-        cursor.execute("DELETE FROM messages WHERE id=?", (message_id,))
-        cursor.execute("DELETE FROM translations WHERE original_message_id=?", (message_id,))
+
+        # Get all messages of this group
+        cursor.execute("SELECT id FROM messages WHERE group_id=?", (group_id,))
+        message_ids = [row[0] for row in cursor.fetchall()]
+
+        # Delete translations of those messages
+        for msg_id in message_ids:
+            cursor.execute("DELETE FROM translations WHERE original_message_id=?", (msg_id,))
+
+        # Delete messages
+        cursor.execute("DELETE FROM messages WHERE group_id=?", (group_id,))
+
+        # Delete group members
+        cursor.execute("DELETE FROM group_members WHERE group_id=?", (group_id,))
+
+        # Delete group
+        cursor.execute("DELETE FROM groups WHERE id=?", (group_id,))
+
     return redirect('/admin_dashboard')
+
+@app.route('/admin/remove_member/<int:group_id>/<int:user_id>')
+def admin_remove_member(group_id, user_id):
+    if not session.get('is_admin'):
+        return redirect('/admin_login')
+    with sqlite3.connect(DATABASE) as db:
+        cursor = db.cursor()
+        cursor.execute("DELETE FROM group_members WHERE group_id=? AND user_id=?", (group_id, user_id))
+        cursor.execute("DELETE FROM translations WHERE group_id=? AND user_id=?", (group_id, user_id))
+    return redirect('/admin_dashboard')
+
+
 
 #admin logout
 @app.route('/admin_logout')
